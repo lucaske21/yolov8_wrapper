@@ -40,10 +40,10 @@ cv::Rect cxcywh_to_rect(float cx, float cy, float w, float h, const PreprocessCo
   x2 = (x2 - ctx.pad_x) / ctx.scale_x;
   y2 = (y2 - ctx.pad_y) / ctx.scale_y;
 
-  x1 = std::max(0.0f, std::min(x1, static_cast<float>(ctx.original_width - 1)));
-  y1 = std::max(0.0f, std::min(y1, static_cast<float>(ctx.original_height - 1)));
-  x2 = std::max(0.0f, std::min(x2, static_cast<float>(ctx.original_width - 1)));
-  y2 = std::max(0.0f, std::min(y2, static_cast<float>(ctx.original_height - 1)));
+  x1 = std::max(0.0f, std::min(x1, static_cast<float>(ctx.original_width)));
+  y1 = std::max(0.0f, std::min(y1, static_cast<float>(ctx.original_height)));
+  x2 = std::max(0.0f, std::min(x2, static_cast<float>(ctx.original_width)));
+  y2 = std::max(0.0f, std::min(y2, static_cast<float>(ctx.original_height)));
 
   const int ix1 = static_cast<int>(std::round(x1));
   const int iy1 = static_cast<int>(std::round(y1));

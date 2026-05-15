@@ -81,8 +81,9 @@ std::vector<float> preprocess(const cv::Mat& image, const YoloV8Config& config,
     float_img *= (1.0f / 255.0f);
   }
 
-  std::vector<float> tensor(static_cast<size_t>(3 * config.input_width * config.input_height));
   const int channels = 3;
+  std::vector<float> tensor(
+      static_cast<size_t>(channels * config.input_width * config.input_height));
   for (int c = 0; c < channels; ++c) {
     for (int y = 0; y < config.input_height; ++y) {
       const cv::Vec3f* row_ptr = float_img.ptr<cv::Vec3f>(y);

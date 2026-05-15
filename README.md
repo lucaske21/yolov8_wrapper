@@ -21,7 +21,7 @@
 ## 项目结构
 
 ```text
-yolov8_wrapper/
+yolov8_onnx_cpp/
 ├── CMakeLists.txt
 ├── README.md
 ├── include/
