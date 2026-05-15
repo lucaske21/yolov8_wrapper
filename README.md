@@ -70,6 +70,23 @@ cmake -S . -B build \
 cmake --build build -j
 ```
 
+## 使用 Docker 构建
+
+```bash
+docker build -t yolov8_wrapper_builder .
+```
+
+镜像构建阶段会自动完成依赖安装并编译项目，产物在镜像内 `/workspace/build`。
+
+若要在本地目录中执行同样构建，可使用容器挂载当前工程：
+
+```bash
+docker run --rm -it \
+  -v "$(pwd)":/workspace \
+  yolov8_wrapper_builder \
+  bash -lc 'cmake -S /workspace -B /workspace/build -DONNXRUNTIME_DIR=/opt/onnxruntime-linux-x64-1.18.1 -DYOLOV8_ENABLE_CUDA_PROVIDER=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build /workspace/build -j"$(nproc)"'
+```
+
 `ONNXRUNTIME_DIR` 下建议包含：
 
 - `include/`
