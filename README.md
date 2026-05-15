@@ -70,6 +70,11 @@ cmake -S . -B build \
 cmake --build build -j
 ```
 
+`ONNXRUNTIME_DIR` 下建议包含：
+
+- `include/`
+- `lib/`（部分发行版可能是 `lib64/` 或 Windows 的 `lib/Release`）
+
 如果你只做 CPU 推理，也可保持 `ONNXRUNTIME_DIR` 指向 CPU 版本（但 `Device::CUDA` 将报错）。
 
 ## 运行示例

@@ -26,7 +26,7 @@ std::string class_name_for(const YoloV8Config& config, int class_id) {
   return "class_" + std::to_string(class_id);
 }
 
-cv::Rect xywh_to_rect(float cx, float cy, float w, float h, const PreprocessContext& ctx) {
+cv::Rect cxcywh_to_rect(float cx, float cy, float w, float h, const PreprocessContext& ctx) {
   float x1 = cx - w * 0.5f;
   float y1 = cy - h * 0.5f;
   float x2 = cx + w * 0.5f;
@@ -109,7 +109,7 @@ std::vector<Candidate> decode_candidates(const std::vector<float>& output_data,
       continue;
     }
 
-    const cv::Rect box = xywh_to_rect(cx, cy, w, h, context);
+    const cv::Rect box = cxcywh_to_rect(cx, cy, w, h, context);
     if (box.width <= 0 || box.height <= 0) {
       continue;
     }

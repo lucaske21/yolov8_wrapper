@@ -7,11 +7,6 @@
 #include <stdexcept>
 
 namespace yolov8 {
-namespace {
-float clampf(float x, float lo, float hi) {
-  return std::max(lo, std::min(hi, x));
-}
-}  // namespace
 
 std::vector<float> preprocess(const cv::Mat& image, const YoloV8Config& config,
                               PreprocessContext* context) {
@@ -92,10 +87,9 @@ std::vector<float> preprocess(const cv::Mat& image, const YoloV8Config& config,
     for (int y = 0; y < config.input_height; ++y) {
       const cv::Vec3f* row_ptr = float_img.ptr<cv::Vec3f>(y);
       for (int x = 0; x < config.input_width; ++x) {
-        const float value = clampf(row_ptr[x][c], 0.0f, config.normalize ? 1.0f : 255.0f);
         const size_t index = static_cast<size_t>(c * config.input_height * config.input_width +
                                                  y * config.input_width + x);
-        tensor[index] = value;
+        tensor[index] = row_ptr[x][c];
       }
     }
   }
