@@ -18,6 +18,7 @@ RUN curl -L -o onnxruntime.tgz \
     && tar -xzf onnxruntime.tgz \
     && rm onnxruntime.tgz
 
+ENV ONNXRUNTIME_VERSION=${ONNXRUNTIME_VERSION}
 ENV ONNXRUNTIME_DIR=/opt/onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}
 
 WORKDIR /workspace
