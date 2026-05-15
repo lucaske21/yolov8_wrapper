@@ -84,7 +84,7 @@ docker build -t yolov8_wrapper_builder .
 docker run --rm -it \
   -v "$(pwd)":/workspace \
   yolov8_wrapper_builder \
-  bash -lc 'cmake -S /workspace -B /workspace/build -DONNXRUNTIME_DIR=/opt/onnxruntime-linux-x64-1.18.1 -DYOLOV8_ENABLE_CUDA_PROVIDER=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build /workspace/build -j"$(nproc)"'
+  bash -lc 'cmake -S /workspace -B /workspace/build -DONNXRUNTIME_DIR=$ONNXRUNTIME_DIR -DYOLOV8_ENABLE_CUDA_PROVIDER=OFF -DCMAKE_BUILD_TYPE=Release && cmake --build /workspace/build -j"$(nproc)"'
 ```
 
 `ONNXRUNTIME_DIR` 下建议包含：
