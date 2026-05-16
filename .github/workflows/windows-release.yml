@@ -53,7 +53,16 @@ jobs:
         run: |
           $env:VCPKG_MAX_CONCURRENCY = $env:NUMBER_OF_PROCESSORS
           if (-not (Test-Path "$env:LOCAL_VCPKG_DIR\\vcpkg.exe")) {
-            git clone --depth 1 https://github.com/microsoft/vcpkg "$env:LOCAL_VCPKG_DIR"
+            $vcpkgTempDir = Join-Path $env:RUNNER_TEMP "vcpkg-src"
+            if (Test-Path $vcpkgTempDir) {
+              Remove-Item -Path $vcpkgTempDir -Recurse -Force
+            }
+
+            git clone --depth 1 https://github.com/microsoft/vcpkg "$vcpkgTempDir"
+
+            New-Item -ItemType Directory -Path "$env:LOCAL_VCPKG_DIR" -Force | Out-Null
+            Copy-Item "$vcpkgTempDir\\*" "$env:LOCAL_VCPKG_DIR" -Recurse -Force
+
             & "$env:LOCAL_VCPKG_DIR\\bootstrap-vcpkg.bat" -disableMetrics
           }
           & "$env:LOCAL_VCPKG_DIR\\vcpkg.exe" --vcpkg-root "$env:LOCAL_VCPKG_DIR" --disable-metrics install opencv4[core,dnn]:x64-windows
