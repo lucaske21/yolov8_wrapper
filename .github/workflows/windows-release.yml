@@ -40,7 +40,7 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/microsoft/vcpkg "$env:LOCAL_VCPKG_DIR"
           & "$env:LOCAL_VCPKG_DIR\\bootstrap-vcpkg.bat" -disableMetrics
-          & "$env:LOCAL_VCPKG_DIR\\vcpkg.exe" --vcpkg-root "$env:LOCAL_VCPKG_DIR" --disable-metrics install opencv4[core,dnn,imgcodecs]:x64-windows
+          & "$env:LOCAL_VCPKG_DIR\\vcpkg.exe" --vcpkg-root "$env:LOCAL_VCPKG_DIR" --disable-metrics install opencv4[core,dnn]:x64-windows
 
       - name: Download ONNX Runtime
         shell: pwsh
