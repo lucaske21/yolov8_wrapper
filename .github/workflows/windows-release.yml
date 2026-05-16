@@ -25,7 +25,7 @@ jobs:
 
     env:
       BUILD_TYPE: Release
-      VCPKG_ROOT: ${{ github.workspace }}\\vcpkg
+      LOCAL_VCPKG_DIR: ${{ github.workspace }}\\local-vcpkg
       ONNXRUNTIME_VERSION: ${{ github.event.inputs.onnxruntime_version || '1.18.1' }}
 
     steps:
@@ -38,9 +38,9 @@ jobs:
       - name: Setup vcpkg and install OpenCV
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/microsoft/vcpkg "$env:VCPKG_ROOT"
-          & "$env:VCPKG_ROOT\\bootstrap-vcpkg.bat"
-          & "$env:VCPKG_ROOT\\vcpkg.exe" install opencv4[core,dnn,imgcodecs,imgproc]:x64-windows
+          git clone --depth 1 https://github.com/microsoft/vcpkg "$env:LOCAL_VCPKG_DIR"
+          & "$env:LOCAL_VCPKG_DIR\\bootstrap-vcpkg.bat"
+          & "$env:LOCAL_VCPKG_DIR\\vcpkg.exe" install opencv4[core,dnn,imgcodecs,imgproc]:x64-windows
 
       - name: Download ONNX Runtime
         shell: pwsh
@@ -57,7 +57,7 @@ jobs:
         run: |
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_BUILD_TYPE=$env:BUILD_TYPE `
-            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\\scripts\\buildsystems\\vcpkg.cmake" `
+            -DCMAKE_TOOLCHAIN_FILE="$env:LOCAL_VCPKG_DIR\\scripts\\buildsystems\\vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
             -DONNXRUNTIME_DIR="$env:ONNXRUNTIME_DIR" `
             -DYOLOV8_ENABLE_CUDA_PROVIDER=OFF
@@ -81,7 +81,7 @@ jobs:
             Copy-Item $onnxDll -Destination $dist -Force
           }
 
-          $opencvBin = Join-Path $env:VCPKG_ROOT "installed\\x64-windows\\bin"
+          $opencvBin = Join-Path $env:LOCAL_VCPKG_DIR "installed\\x64-windows\\bin"
           if (Test-Path $opencvBin) {
             Get-ChildItem -Path $opencvBin -Filter "opencv*.dll" | ForEach-Object {
               Copy-Item $_.FullName -Destination $dist -Force
