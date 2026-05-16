@@ -44,9 +44,9 @@ jobs:
             ${{ env.LOCAL_VCPKG_DIR }}\\installed
             ${{ env.LOCAL_VCPKG_DIR }}\\packages
             ${{ env.LOCAL_VCPKG_DIR }}\\buildtrees
-          key: ${{ runner.os }}-vcpkg-opencv4-core-dnn-x64-${{ hashFiles('CMakeLists.txt', '.github/workflows/windows-release.yml') }}
+          key: ${{ runner.os }}-vcpkg-opencv4-core-imgproc-imgcodecs-jpeg-png-dnn-x64-${{ hashFiles('CMakeLists.txt', '.github/workflows/windows-release.yml') }}
           restore-keys: |
-            ${{ runner.os }}-vcpkg-opencv4-core-dnn-x64-
+            ${{ runner.os }}-vcpkg-opencv4-core-imgproc-imgcodecs-jpeg-png-dnn-x64-
 
       - name: Setup vcpkg and install OpenCV
         shell: pwsh
@@ -65,7 +65,7 @@ jobs:
 
             & "$env:LOCAL_VCPKG_DIR\\bootstrap-vcpkg.bat" -disableMetrics
           }
-          & "$env:LOCAL_VCPKG_DIR\\vcpkg.exe" --vcpkg-root "$env:LOCAL_VCPKG_DIR" --disable-metrics install opencv4[core,dnn]:x64-windows
+          & "$env:LOCAL_VCPKG_DIR\\vcpkg.exe" --vcpkg-root "$env:LOCAL_VCPKG_DIR" --disable-metrics install opencv4[core,imgproc,imgcodecs,jpeg,png,dnn]:x64-windows
 
       - name: Download ONNX Runtime
         shell: pwsh
