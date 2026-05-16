@@ -27,6 +27,7 @@ jobs:
       BUILD_TYPE: Release
       LOCAL_VCPKG_DIR: ${{ github.workspace }}\\local-vcpkg
       ONNXRUNTIME_VERSION: ${{ github.event.inputs.onnxruntime_version || '1.18.1' }}
+      CMAKE_BUILD_PARALLEL_LEVEL: 0
 
     steps:
       - name: Checkout
@@ -35,11 +36,26 @@ jobs:
       - name: Setup MSVC Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.LOCAL_VCPKG_DIR }}\\downloads
+            ${{ env.LOCAL_VCPKG_DIR }}\\installed
+            ${{ env.LOCAL_VCPKG_DIR }}\\packages
+            ${{ env.LOCAL_VCPKG_DIR }}\\buildtrees
+          key: ${{ runner.os }}-vcpkg-opencv4-core-dnn-x64-${{ hashFiles('CMakeLists.txt', '.github/workflows/windows-release.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-opencv4-core-dnn-x64-
+
       - name: Setup vcpkg and install OpenCV
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/microsoft/vcpkg "$env:LOCAL_VCPKG_DIR"
-          & "$env:LOCAL_VCPKG_DIR\\bootstrap-vcpkg.bat" -disableMetrics
+          $env:VCPKG_MAX_CONCURRENCY = $env:NUMBER_OF_PROCESSORS
+          if (-not (Test-Path "$env:LOCAL_VCPKG_DIR\\vcpkg.exe")) {
+            git clone --depth 1 https://github.com/microsoft/vcpkg "$env:LOCAL_VCPKG_DIR"
+            & "$env:LOCAL_VCPKG_DIR\\bootstrap-vcpkg.bat" -disableMetrics
+          }
           & "$env:LOCAL_VCPKG_DIR\\vcpkg.exe" --vcpkg-root "$env:LOCAL_VCPKG_DIR" --disable-metrics install opencv4[core,dnn]:x64-windows
 
       - name: Download ONNX Runtime
@@ -65,7 +81,7 @@ jobs:
       - name: Build executable
         shell: pwsh
         run: |
-          cmake --build build --config $env:BUILD_TYPE --target yolov8_example
+          cmake --build build --config $env:BUILD_TYPE --parallel $env:NUMBER_OF_PROCESSORS --target yolov8_example
 
       - name: Package executable
         id: package
