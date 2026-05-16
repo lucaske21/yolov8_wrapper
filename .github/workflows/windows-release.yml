@@ -111,15 +111,42 @@ jobs:
             throw "vcpkg runtime bin folder not found: $vcpkgBin"
           }
 
+          $opencvToolsBin = Join-Path $env:LOCAL_VCPKG_DIR "installed\\x64-windows\\tools\\opencv4\\bin"
+
           # Copy all vcpkg runtime DLLs so transitive deps (zlib/protobuf/abseil/etc.) are included.
-          Get-ChildItem -Path $vcpkgBin -Filter "*.dll" | ForEach-Object {
+          Get-ChildItem -Path $vcpkgBin -Filter "*.dll" -Recurse | ForEach-Object {
             Copy-Item $_.FullName -Destination $dist -Force
           }
 
-          $requiredDllPatterns = @("opencv*.dll", "*protobuf*.dll", "abseil*.dll", "z*.dll")
+          if (Test-Path $opencvToolsBin) {
+            Get-ChildItem -Path $opencvToolsBin -Filter "*.dll" -Recurse | ForEach-Object {
+              Copy-Item $_.FullName -Destination $dist -Force
+            }
+          }
+
+          $requiredDllPatterns = @("opencv*.dll", "opencv_imgcodecs*.dll", "*protobuf*.dll", "abseil*.dll", "z*.dll")
           foreach ($pattern in $requiredDllPatterns) {
             if (-not (Get-ChildItem -Path $dist -Filter $pattern -ErrorAction SilentlyContinue)) {
               throw "Expected runtime DLLs matching '$pattern' were not found in package output."
+            }
+          }
+
+          $codecPatternGroups = @(
+            @{ Name = "jpeg"; Patterns = @("*jpeg*.dll", "*turbojpeg*.dll") },
+            @{ Name = "png"; Patterns = @("*png*.dll", "*libpng*.dll") }
+          )
+
+          foreach ($group in $codecPatternGroups) {
+            $found = $false
+            foreach ($pattern in $group.Patterns) {
+              if (Get-ChildItem -Path $dist -Filter $pattern -ErrorAction SilentlyContinue) {
+                $found = $true
+                break
+              }
+            }
+
+            if (-not $found) {
+              throw "Expected image codec runtime for '$($group.Name)' is missing from package output."
             }
           }
 
