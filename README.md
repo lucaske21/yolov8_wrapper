@@ -105,6 +105,8 @@ docker run --rm \
 ghcr.io/<owner>/yolov8_wrapper:<tag>
 ```
 
+其中 `<owner>` 为仓库所属用户或组织名（与 `github.repository_owner` 一致）。
+
 例如：
 
 - `ghcr.io/<owner>/yolov8_wrapper:v1.0.0`
