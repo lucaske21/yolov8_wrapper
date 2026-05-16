@@ -27,6 +27,7 @@ jobs:
       BUILD_TYPE: Release
       LOCAL_VCPKG_DIR: ${{ github.workspace }}\\local-vcpkg
       ONNXRUNTIME_VERSION: ${{ github.event.inputs.onnxruntime_version || '1.18.1' }}
+      CMAKE_BUILD_PARALLEL_LEVEL: 0
 
     steps:
       - name: Checkout
@@ -35,11 +36,35 @@ jobs:
       - name: Setup MSVC Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.LOCAL_VCPKG_DIR }}\\downloads
+            ${{ env.LOCAL_VCPKG_DIR }}\\installed
+            ${{ env.LOCAL_VCPKG_DIR }}\\packages
+            ${{ env.LOCAL_VCPKG_DIR }}\\buildtrees
+          key: ${{ runner.os }}-vcpkg-opencv4-core-dnn-x64-${{ hashFiles('CMakeLists.txt', '.github/workflows/windows-release.yml') }}
+          restore-keys: |
+            ${{ runner.os }}-vcpkg-opencv4-core-dnn-x64-
+
       - name: Setup vcpkg and install OpenCV
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/microsoft/vcpkg "$env:LOCAL_VCPKG_DIR"
-          & "$env:LOCAL_VCPKG_DIR\\bootstrap-vcpkg.bat" -disableMetrics
+          $env:VCPKG_MAX_CONCURRENCY = $env:NUMBER_OF_PROCESSORS
+          if (-not (Test-Path "$env:LOCAL_VCPKG_DIR\\vcpkg.exe")) {
+            $vcpkgTempDir = Join-Path $env:RUNNER_TEMP "vcpkg-src"
+            if (Test-Path $vcpkgTempDir) {
+              Remove-Item -Path $vcpkgTempDir -Recurse -Force
+            }
+
+            git clone --depth 1 https://github.com/microsoft/vcpkg "$vcpkgTempDir"
+
+            New-Item -ItemType Directory -Path "$env:LOCAL_VCPKG_DIR" -Force | Out-Null
+            Copy-Item "$vcpkgTempDir\\*" "$env:LOCAL_VCPKG_DIR" -Recurse -Force
+
+            & "$env:LOCAL_VCPKG_DIR\\bootstrap-vcpkg.bat" -disableMetrics
+          }
           & "$env:LOCAL_VCPKG_DIR\\vcpkg.exe" --vcpkg-root "$env:LOCAL_VCPKG_DIR" --disable-metrics install opencv4[core,dnn]:x64-windows
 
       - name: Download ONNX Runtime
@@ -65,7 +90,7 @@ jobs:
       - name: Build executable
         shell: pwsh
         run: |
-          cmake --build build --config $env:BUILD_TYPE --target yolov8_example
+          cmake --build build --config $env:BUILD_TYPE --parallel $env:NUMBER_OF_PROCESSORS --target yolov8_example
 
       - name: Package executable
         id: package
@@ -81,11 +106,53 @@ jobs:
             Copy-Item $onnxDll -Destination $dist -Force
           }
 
-          $opencvBin = Join-Path $env:LOCAL_VCPKG_DIR "installed\\x64-windows\\bin"
-          if (Test-Path $opencvBin) {
-            Get-ChildItem -Path $opencvBin -Filter "opencv*.dll" | ForEach-Object {
+          $vcpkgBin = Join-Path $env:LOCAL_VCPKG_DIR "installed\\x64-windows\\bin"
+          if (-not (Test-Path $vcpkgBin)) {
+            throw "vcpkg runtime bin folder not found: $vcpkgBin"
+          }
+
+          $opencvToolsBin = Join-Path $env:LOCAL_VCPKG_DIR "installed\\x64-windows\\tools\\opencv4\\bin"
+
+          # Copy all vcpkg runtime DLLs so transitive deps (zlib/protobuf/abseil/etc.) are included.
+          Get-ChildItem -Path $vcpkgBin -Filter "*.dll" -Recurse | ForEach-Object {
+            Copy-Item $_.FullName -Destination $dist -Force
+          }
+
+          if (Test-Path $opencvToolsBin) {
+            Get-ChildItem -Path $opencvToolsBin -Filter "*.dll" -Recurse | ForEach-Object {
               Copy-Item $_.FullName -Destination $dist -Force
             }
+          }
+
+          $requiredDllPatterns = @("opencv*.dll", "opencv_imgcodecs*.dll", "*protobuf*.dll", "abseil*.dll", "z*.dll")
+          foreach ($pattern in $requiredDllPatterns) {
+            if (-not (Get-ChildItem -Path $dist -Filter $pattern -ErrorAction SilentlyContinue)) {
+              throw "Expected runtime DLLs matching '$pattern' were not found in package output."
+            }
+          }
+
+          $codecPatternGroups = @(
+            @{ Name = "jpeg"; Patterns = @("*jpeg*.dll", "*turbojpeg*.dll") },
+            @{ Name = "png"; Patterns = @("*png*.dll", "*libpng*.dll") }
+          )
+
+          foreach ($group in $codecPatternGroups) {
+            $found = $false
+            foreach ($pattern in $group.Patterns) {
+              if (Get-ChildItem -Path $dist -Filter $pattern -ErrorAction SilentlyContinue) {
+                $found = $true
+                break
+              }
+            }
+
+            if (-not $found) {
+              Write-Warning "No standalone '$($group.Name)' codec DLL found. This may be OK if codec support is built into OpenCV imgcodecs."
+            }
+          }
+
+          Write-Host "Packaged runtime DLLs:"
+          Get-ChildItem -Path $dist -Filter "*.dll" | Select-Object -ExpandProperty Name | Sort-Object | ForEach-Object {
+            Write-Host " - $_"
           }
 
           $assetName = "yolov8_example-windows-x64-${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}.zip"

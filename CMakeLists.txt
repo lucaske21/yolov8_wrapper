@@ -65,4 +65,4 @@ target_link_libraries(yolov8_wrapper
 )
 
 add_executable(yolov8_example examples/main.cpp)
-target_link_libraries(yolov8_example PRIVATE yolov8_wrapper)
+target_link_libraries(yolov8_example PRIVATE yolov8_wrapper ${OpenCV_LIBS})
