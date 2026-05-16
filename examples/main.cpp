@@ -3,6 +3,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <filesystem>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -20,6 +21,28 @@ yolov8::Device parse_device(const std::string& device_arg) {
                            ". Use 'cpu' or 'cuda'.");
 }
 
+std::filesystem::path resolve_image_path(const std::string& image_arg,
+                                         const std::filesystem::path& exe_path) {
+  const std::filesystem::path input_path(image_arg);
+  if (input_path.is_absolute()) {
+    return input_path;
+  }
+
+  if (std::filesystem::exists(input_path)) {
+    return input_path;
+  }
+
+  const std::filesystem::path exe_dir = exe_path.parent_path();
+  if (!exe_dir.empty()) {
+    const std::filesystem::path from_exe_dir = exe_dir / input_path;
+    if (std::filesystem::exists(from_exe_dir)) {
+      return from_exe_dir;
+    }
+  }
+
+  return input_path;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -31,11 +54,16 @@ int main(int argc, char** argv) {
   const std::string model_path = argv[1];
   const std::string image_path = argv[2];
   const std::string device_arg = argv[3];
+  const std::filesystem::path exe_path = argv[0];
 
   try {
-    cv::Mat image = cv::imread(image_path, cv::IMREAD_COLOR);
+    const std::filesystem::path resolved_image_path = resolve_image_path(image_path, exe_path);
+    cv::Mat image = cv::imread(resolved_image_path.string(), cv::IMREAD_COLOR);
     if (image.empty()) {
-      throw std::runtime_error("Failed to read image: " + image_path);
+      throw std::runtime_error("Failed to read image: " + image_path +
+                               " (resolved as: " + resolved_image_path.string() +
+                               ", working directory: " + std::filesystem::current_path().string() +
+                               ")");
     }
 
     yolov8::YoloV8Config config;

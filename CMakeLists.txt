@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(YOLOV8_ENABLE_CUDA_PROVIDER "Enable CUDA execution provider support if available" ON)
 
-find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs dnn)
+find_package(OpenCV REQUIRED COMPONENTS core dnn)
 
 set(ONNXRUNTIME_DIR "" CACHE PATH "Path to ONNX Runtime root directory (with include/ and lib/)")
 
