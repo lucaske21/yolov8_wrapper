@@ -4,9 +4,11 @@
 #include <opencv2/imgproc.hpp>
 
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -43,6 +45,40 @@ std::filesystem::path resolve_image_path(const std::string& image_arg,
   return input_path;
 }
 
+cv::Mat load_image_checked(const std::filesystem::path& image_path,
+                           const std::string& original_image_arg) {
+  if (!std::filesystem::exists(image_path)) {
+    throw std::runtime_error("Image file does not exist: " + image_path.string());
+  }
+  if (!std::filesystem::is_regular_file(image_path)) {
+    throw std::runtime_error("Image path is not a regular file: " + image_path.string());
+  }
+
+  std::ifstream image_file(image_path, std::ios::binary);
+  if (!image_file) {
+    throw std::runtime_error("Cannot open image file for reading: " + image_path.string());
+  }
+
+  std::vector<unsigned char> encoded((std::istreambuf_iterator<char>(image_file)),
+                                     std::istreambuf_iterator<char>());
+  if (encoded.empty()) {
+    throw std::runtime_error("Image file is empty or unreadable: " + image_path.string());
+  }
+
+  cv::Mat image = cv::imdecode(encoded, cv::IMREAD_COLOR);
+  if (image.empty()) {
+    const bool has_reader = cv::haveImageReader(image_path.string());
+    throw std::runtime_error("Failed to decode image: " + original_image_arg +
+                             " (resolved as: " + image_path.string() +
+                             ", bytes: " + std::to_string(encoded.size()) +
+                             ", haveImageReader: " + (has_reader ? "true" : "false") +
+                             ", working directory: " + std::filesystem::current_path().string() +
+                             ")");
+  }
+
+  return image;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -58,13 +94,7 @@ int main(int argc, char** argv) {
 
   try {
     const std::filesystem::path resolved_image_path = resolve_image_path(image_path, exe_path);
-    cv::Mat image = cv::imread(resolved_image_path.string(), cv::IMREAD_COLOR);
-    if (image.empty()) {
-      throw std::runtime_error("Failed to read image: " + image_path +
-                               " (resolved as: " + resolved_image_path.string() +
-                               ", working directory: " + std::filesystem::current_path().string() +
-                               ")");
-    }
+    cv::Mat image = load_image_checked(resolved_image_path, image_path);
 
     yolov8::YoloV8Config config;
     config.model_path = model_path;
