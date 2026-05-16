@@ -107,8 +107,8 @@ ghcr.io/<owner>/yolov8_wrapper:<tag>
 
 例如：
 
-- `ghcr.io/lucaske21/yolov8_wrapper:v1.0.0`
-- `ghcr.io/lucaske21/yolov8_wrapper:latest`
+- `ghcr.io/<owner>/yolov8_wrapper:v1.0.0`
+- `ghcr.io/<owner>/yolov8_wrapper:latest`
 
 ## 运行示例
 
