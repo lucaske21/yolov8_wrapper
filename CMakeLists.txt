@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(YOLOV8_ENABLE_CUDA_PROVIDER "Enable CUDA execution provider support if available" ON)
 
-find_package(OpenCV REQUIRED COMPONENTS core dnn)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc imgcodecs dnn)
 
 set(ONNXRUNTIME_DIR "" CACHE PATH "Path to ONNX Runtime root directory (with include/ and lib/)")
 
@@ -65,4 +65,4 @@ target_link_libraries(yolov8_wrapper
 )
 
 add_executable(yolov8_example examples/main.cpp)
-target_link_libraries(yolov8_example PRIVATE yolov8_wrapper)
+target_link_libraries(yolov8_example PRIVATE yolov8_wrapper ${OpenCV_LIBS})
