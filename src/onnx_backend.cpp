@@ -42,7 +42,8 @@ void OnnxYoloBackend::initialize() {
   }
 
   try {
-    session_ = std::make_unique<Ort::Session>(env_, config_.model_path.c_str(), session_options);
+    const std::filesystem::path model_path(config_.model_path);
+    session_ = std::make_unique<Ort::Session>(env_, model_path.c_str(), session_options);
   } catch (const Ort::Exception& e) {
     throw std::runtime_error(std::string("Failed to create ONNX Runtime session: ") + e.what());
   }
