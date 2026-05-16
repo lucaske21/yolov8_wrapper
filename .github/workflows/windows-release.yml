@@ -40,7 +40,7 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/microsoft/vcpkg "$env:LOCAL_VCPKG_DIR"
           & "$env:LOCAL_VCPKG_DIR\\bootstrap-vcpkg.bat" -disableMetrics
-          & "$env:LOCAL_VCPKG_DIR\\vcpkg.exe" --vcpkg-root "$env:LOCAL_VCPKG_DIR" --disable-metrics install opencv4[core,dnn]:x64-windows
+          & "$env:LOCAL_VCPKG_DIR\\vcpkg.exe" --vcpkg-root "$env:LOCAL_VCPKG_DIR" --disable-metrics install opencv4[core,dnn,imgcodecs,imgproc]:x64-windows
 
       - name: Download ONNX Runtime
         shell: pwsh
@@ -81,11 +81,26 @@ jobs:
             Copy-Item $onnxDll -Destination $dist -Force
           }
 
-          $opencvBin = Join-Path $env:LOCAL_VCPKG_DIR "installed\\x64-windows\\bin"
-          if (Test-Path $opencvBin) {
-            Get-ChildItem -Path $opencvBin -Filter "opencv*.dll" | ForEach-Object {
-              Copy-Item $_.FullName -Destination $dist -Force
+          $vcpkgBin = Join-Path $env:LOCAL_VCPKG_DIR "installed\\x64-windows\\bin"
+          if (-not (Test-Path $vcpkgBin)) {
+            throw "vcpkg runtime bin folder not found: $vcpkgBin"
+          }
+
+          # Copy all vcpkg runtime DLLs so transitive deps (zlib/protobuf/abseil/etc.) are included.
+          Get-ChildItem -Path $vcpkgBin -Filter "*.dll" | ForEach-Object {
+            Copy-Item $_.FullName -Destination $dist -Force
+          }
+
+          $requiredDllPatterns = @("opencv*.dll", "*protobuf*.dll", "abseil*.dll", "z*.dll")
+          foreach ($pattern in $requiredDllPatterns) {
+            if (-not (Get-ChildItem -Path $dist -Filter $pattern -ErrorAction SilentlyContinue)) {
+              throw "Expected runtime DLLs matching '$pattern' were not found in package output."
             }
+          }
+
+          Write-Host "Packaged runtime DLLs:"
+          Get-ChildItem -Path $dist -Filter "*.dll" | Select-Object -ExpandProperty Name | Sort-Object | ForEach-Object {
+            Write-Host " - $_"
           }
 
           $assetName = "yolov8_example-windows-x64-${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}.zip"
