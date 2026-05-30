@@ -73,31 +73,44 @@ cmake --build build -j
 ## 使用 Docker 构建
 
 ```bash
-docker build -t yolov8_wrapper_builder .
+docker build -t yolov8_wrapper:local .
 ```
 
-镜像构建阶段会自动完成依赖安装并编译项目，产物在镜像内 `/workspace/build`。
+该镜像使用多阶段构建：
 
-若要在本地目录中执行同样构建，可使用容器挂载当前工程：
+- 第一阶段编译 `yolov8_example`
+- 第二阶段仅打包运行所需产物（示例程序 + ONNX Runtime 动态库）
+
+运行方式（挂载模型与图片）：
 
 ```bash
-docker run --rm -it \
-  -v "$(pwd)":/workspace \
-  yolov8_wrapper_builder \
-  bash -lc '
-    cmake -S /workspace -B /workspace/build \
-      -DONNXRUNTIME_DIR=$ONNXRUNTIME_DIR \
-      -DYOLOV8_ENABLE_CUDA_PROVIDER=OFF \
-      -DCMAKE_BUILD_TYPE=Release && \
-    cmake --build /workspace/build -j"$(nproc)"'
+docker run --rm \
+  -v "$(pwd)":/data \
+  yolov8_wrapper:local \
+  /data/yolov8n.onnx /data/image.jpg cpu
 ```
 
-`ONNXRUNTIME_DIR` 下建议包含：
+## GitHub Actions 自动构建并发布到 GHCR
 
-- `include/`
-- `lib/`（部分发行版可能是 `lib64/` 或 Windows 的 `lib/Release`）
+新增工作流：`.github/workflows/docker-ghcr-release.yml`
 
-如果你只做 CPU 推理，也可保持 `ONNXRUNTIME_DIR` 指向 CPU 版本（但 `Device::CUDA` 将报错）。
+触发方式：
+
+- 推送 tag（`v*`）时自动发布
+- 手动触发 `workflow_dispatch`（可选额外 tag 和 ONNX Runtime 版本）
+
+发布镜像地址：
+
+```text
+ghcr.io/<owner>/yolov8_wrapper:<tag>
+```
+
+其中 `<owner>` 为仓库所属用户或组织名（与 `github.repository_owner` 一致）。
+
+例如：
+
+- `ghcr.io/<owner>/yolov8_wrapper:v1.0.0`
+- `ghcr.io/<owner>/yolov8_wrapper:latest`
 
 ## 运行示例
 
